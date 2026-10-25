@@ -4,10 +4,10 @@ mj_per_kwh = 3.6
 
 COL_ID = "Scenario ID"
 COL_NAME = "Scenario"
-COL_CH4_MJ = "Energy CH4 (MJ)"
-COL_ELEC_MJ = "Electricity potential"
+COL_CH4_MJ  = "Energy CH4 (MJ)"
+COL_ELEC_MJ = "Electricity potential (MJ)"
 COL_YIELD = "Treated Yield (Nm3/d)"
-COL_SPEC = "Specific Yield (L/kgVs)"
+COL_SPEC = "Specific Yield (L/kgVS)"
 COL_Improvement = "Improvement (%)"
 
 required_col = (COL_ID, COL_NAME, COL_CH4_MJ, COL_ELEC_MJ, COL_YIELD, COL_SPEC)
@@ -34,10 +34,10 @@ def implied_feed_kgvs_per_day(rows: pd.Series) -> float:
 def scale_factor_for_feed(df: pd.DataFrame,  reference_id: str, farm_kgvs_per_day:float) -> float:
     if farm_kgvs_per_day <= 0:
         raise ValueError("farm_kgvs_per_day must be positive")
-    return farm_kgvs_per_day / implied_feed_kgvs_per_day
+    return farm_kgvs_per_day / implied_feed_kgvs_per_day(get_scenario, reference_id)
 
 def _to_kwh_per_year(mj_per_day: float, scale_factor: float, opreating_days: float) -> float:
-    return mj_per_kwh /mj_per_day * opreating_days * scale_factor
+    return mj_per_day / mj_per_kwh * opreating_days * scale_factor
 
 def _check_scale_args(scale_factor: float, operating_days: float) -> None:
     if scale_factor <= 0:
@@ -68,9 +68,10 @@ def scenario_to_flows(
         ("Electricity generated (CHP)", "useful_out", gross),
         ("Recovered heat used", "recovered_out", 0.0),
         ("Loses (balancing item)", "loss", e_in - gross),
-        ("Plant own use (electricity)", "parasitic", gross + own_use_frac),
+        ("Plant own use (electricity)", "parasitic", gross * own_use_frac),
+      
     ]
-    return pd.DataFrame(row, columns=["stream", "direction", "kwh_per_year"])
+    return pd.DataFrame(rows, columns=["stream", "direction", "kwh_per_year"])
 
 def chp_heat_available_kwh(
     row: pd.Series,

@@ -1,0 +1,59 @@
+project:
+  name: Farm waste-to-energy
+  currency: AUD
+
+farm:
+  waste_wet_kg_per_day:
+    food_waste: 320
+    scg: 80
+
+  operating_days_per_year: 365
+  status: "testing"
+  source: "ASK group 1 / for farm tonnage, composition and operating days"
+
+compositions:
+  "All food waste":
+    food_waste : 400
+  "Carbohydrate-heavy":
+    food_waste: 80
+    rice: 280
+    scg: 40
+  "With oil":
+    food_waste: 340
+    oil: 20
+    scg: 40
+
+pretreatment:
+  scenario_id: S3
+  status: confirmed
+  source: "Group 1 scenario_summary.csv"
+chp:
+  thermal_efficiency: 0.45 # assume engine heat captured will need to be tuned
+  own_use_fraction: 0.10 # plant own electricity use, share of gross
+  status: "placeholder"
+  source: "need an engine sheet"
+
+heat_recovery:
+  usable_fraction: 0.70 # share of recovered heat farm use
+  boiler_efficiency: 0.85 #efficiency of heater it replace
+  status: placeholder
+  source: "need digester heating demand and on-form heat use"
+
+energy_value:
+  electricity_avoided: 0.30 #$/Kwh the farm stop playing
+  electricity_export: 0.07 #$/Kwh the exported electricity
+  self_use_fraction: 0.80 #share electricity used in site
+  heat_fuel_price: 0.06 #$k/wh of fuel the recovered heat displaces
+
+emissions: 
+  grid_kg_co2_per_kwh: 0.70
+  heat_fuel_kg_co2_per_kwh: 0.20
+  status: placeholder
+  source: "find publisher and cite it"
+
+costs: 
+  total_capex: 300000
+  annual_opex: 20000
+  status: placeholder
+  source: "Item list"
+  

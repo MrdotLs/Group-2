@@ -20,9 +20,11 @@ def recovered_from_stream(
         raise ValueError ("Target temperature mut be below the inlet temperature")
     if dt_min_k < 0:
         raise ValueError ("dt_min_k must not be negative")
+    if not 0 < effectiveness <= 1:
+        raise ValueError("effectiveness must be between 0,1")
 
     floor_c = t_sink_c + dt_min_k
-    t_out_c = max(t_hot_in_c, floor_c)
+    t_out_c = max(t_hot_target_c, floor_c)
     if t_hot_in_c <= t_out_c:
         return 0.0
 
@@ -43,7 +45,7 @@ def heat_offset(
         raise ValueError("usable_fraction must be (0,1)")
     if not 0 < boiler_eff <= 1:
         raise ValueError("Boiler_eff must be in (0,1)")
-
+   
     useful = recovered_kwh * usable_fraction
     displaced = useful / boiler_eff
 
@@ -53,6 +55,6 @@ def heat_offset(
         "displaced_fuel_kwh": displaced,
     }
     if fuel_price is not None:
-        out["annual_saving"] = displaced & fuel_price
+        out["annual_saving"] = displaced * fuel_price
         out["heat_price_per_kwh"] = fuel_price/boiler_eff
     return out

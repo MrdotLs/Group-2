@@ -14,13 +14,13 @@ def validate_flows(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.copy()
     df["direction"] = df["direction"].astype("str").str.strip().str.lower()
-    df[{"kwh_per_year"}] = pd.to_numeric(df["kw_per_year"], error="raise")
+    df["kwh_per_year"] = pd.to_numeric(df["kwh_per_year"], errors="raise")
 
     bad = sorted(set(df["direction"]) - set(valid_direction))
     if bad:
         raise ValueError(f"Unkown Directions(s) {bad}; ise on of {list(valid_direction)}")
 
-    if(df["kw_per_year"] < 0).any():
+    if(df["kwh_per_year"] < 0).any():
         raise ValueError(f"kwh_per_year must be higher then negative value")
 
     if df.loc[df["direction"] == "in", "kwh_per_year"].sum() <= 0:
@@ -51,7 +51,7 @@ def run_balance(flows, tol:float = 0.05, recovered_kwh: float | None = None) -> 
         moved = recovered_kwh - recovered
         if loss - moved < 0:
             raise ValueError("recovered heat exceed the lost it meant to come out if it")
-        recovered, loss = recovered, loss - moved
+        recovered, loss = recovered_kwh, loss - moved
 
     e_out = gross + recovered + loss
     closure = abs(e_in - e_out) /  e_in
@@ -70,8 +70,8 @@ def run_balance(flows, tol:float = 0.05, recovered_kwh: float | None = None) -> 
         "net_electric_kwh": net_electric,
         "recovered_heat_kwh": recovered,
         "loss_kwh": loss,
-        "effieciency": (gross + recovered) / e_in,
-        "net_effiency": (net_electric + recovered) / e_in,
+        "efficiency": (gross + recovered) / e_in,
+        "net_efficiency": (net_electric + recovered) / e_in,
         "breakdown":{
             "Net electricity": net_electric,
             "Plant own use": parasatic,
@@ -88,11 +88,11 @@ def format_balance(r: dict) -> str:
         ("of which own use", r["parasitic_kwh"]),
         ("Net electricity", r["net_electric_kwh"]),
         ("Recovered heat used", r["recovered_heat_kwh"]),
-        ("Recovered heat used", r["lose_kwh"]),
+        ("Recovered heat used", r["loss_kwh"]),
         ("Total out", r["e_out"]),
     ]
     lines = [f"{name:<24}{value:>14,.0f}kWh/yr" for name, value in rows]
-    lines.append(f"{'Closure error':<24}{r['closure']:>13,1%}")
-    lines.append(f"{'Efficiency (gross)':<24}{r['efficiency']:>13,1%}")
+    lines.append(f"{'Closure error':<24}{r['closure']:>13.1%}")
+    lines.append(f"{'Efficiency (gross)':<24}{r['efficiency']:>13.1%}")
     lines.append(f"{'Efficiency (net)':<24}{r['net_efficiency']:>13.1%}")
     return "\n".join(lines)
