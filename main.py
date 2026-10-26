@@ -8,7 +8,7 @@ def main() -> None:
     p.add_argument("--scenarios", default="data/scenario_summary.csv")
     p.add_argument("--properties", default="data/feedstock.csv")
     p.add_argument("--out", default="outputs")
-    p.add_argument("--no-charts", default="store_true")
+    p.add_argument("--no-charts", action="store_true")
     args = p.parse_args()
 
     a = load_assumptions(args.assumptions)

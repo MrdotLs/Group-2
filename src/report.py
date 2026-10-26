@@ -28,7 +28,7 @@ from src.group_1_adapter import (
 from src.heat_recovery import heat_offset
 
 REQUIRED_SECTIONS = (
-    "farm", "pretreatment", "chp", "heat_recovery", "energy_value", "emissions", "costs",
+    "farm", "pretreatment", "chp", "heat_recovery", "energy_value", "emissions",
 )
 
 
@@ -84,10 +84,6 @@ def run_pipeline(assumptions, scenario_path, properties_path) -> dict:
         + heat["displaced_fuel_kwh"] * em["heat_fuel_kg_co2_per_kwh"]
     ) / 1000.0
 
-    capex, opex = a["costs"].get("total_capex"), a["costs"].get("annual_opex") or 0.0
-    net_cash = annual_saving - opex
-    payback = capex / net_cash if capex and net_cash > 0 else None
-
     comparison = composition_table(
         df,
         {"Farm mix": wet, **a.get("compositions", {})},
@@ -113,9 +109,6 @@ def run_pipeline(assumptions, scenario_path, properties_path) -> dict:
             "Overall efficiency (%)": bal["net_efficiency"] * 100,
             "Electricity saving ($/yr)": elec_saving,
             "Heat saving ($/yr)": heat["annual_saving"],
-            "Total annual saving ($/yr)": annual_saving,
-            "Total capital cost ($)": capex,
-            "Simple payback (years)": payback,
             "CO2 avoided (t/yr)": co2,
         },
     }

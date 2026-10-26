@@ -12,7 +12,8 @@ from src.group_1_adapter import(
     COL_SPEC,
     COL_YIELD,
     mj_per_kwh,
-    get_scenario
+    get_scenario,
+    sort_ids,
 )
 
 COL_MIX = "Feedstock Mixture"
@@ -35,11 +36,28 @@ def parse_mixture(text:str) -> dict:
         raise ValueError(f"Mixure {text!r} does not add up to 100%")
     return out
 
+def same_mixture(a:dict, b:dict, tol:float = 1e-6) -> bool:
+    keys = set(a) | set(b)
+    return all(abs(a.get(k, 0.0) - b.get(k, 0.0)) <= tol for k in keys)
+
 
 def _need_columns(df: pd.DataFrame, cols) -> None:
     missing = [c for c in cols if c not in df.columns]
     if missing:
         raise ValueError(f"scenario file is missing colomns: {missing}")
+
+def fit_rows(df: pd.DataFrame, reference_id: str = "s3", exclude_id=("S9",), fit_ids=None) -> pd.DataFrame:
+    _need_columns(df, (COL_MIX, COL_FPSI, COL_SPEC,COL_ID))
+    if fit_ids is not None:
+        for sid in fit_ids:
+            get_scenario(df, sid)
+        return df[[COL_ID].isin(fit_ids)]
+    ref = get_scenario(df, reference_id)
+    ref_mix = parse_mixture(ref[COL_MIX])
+    same_pretreatment = (df[COL_FPSI] - ref[COL_FPSI]).abs() < 1e-6
+    is_ref = df[COL_ID] == reference_id
+    other_mix = df[COL_MIX].map(lambda m : not same_mixture(parse_mixture(m), ref_mix))
+    return df[same_pretreatment & ~df[COL_ID].isin(exclude_id) & (is_ref | other_mix)]
 
 def fit_feedstock_yield(df: pd.DataFrame, reference_id: str = "S3", exclude_id=("S9",)):
     _need_columns(df, (COL_MIX, COL_FPSI, COL_SPEC, COL_ID))
@@ -57,6 +75,21 @@ def fit_feedstock_yield(df: pd.DataFrame, reference_id: str = "S3", exclude_id=(
         raise ValueError("The scenarios do not pin down the yeild of every feedstock")
     worst = float(np.abs(a @ sol - b).max())
     return dict(zip(names, (float(x) for x in sol))), worst
+
+
+def Scenario_data_issue(df:pd.DataFrame, tol:float = 0.01) -> pd.DataFrame:
+    _need_columns(df, COL_CH4_MJ, COL_ELEC_MJ, COL_YIELD)
+    checks = {
+        "methane energy content (MJ/Nm3)": df[COL_CH4_MJ] / df[COL_YIELD],
+        "electrical efficiency": df[COL_ELEC_MJ] / df[COL_CH4_MJ],
+    }
+    rows = []
+    for name, s in checks.items():
+        expected = float(s.median())
+        bad = (s / expected - 1).abs() > tol
+        for sid, value in zip(df.loc[bad, COL_ID], s[bad]):
+            rows.append({COL_ID: sid,"check": name, "value":float(value), "expected": expected})
+    return pd.DataFrame(rows, columns=[COL_ID, "check", "value", "expected"])
 
 def energy_constants(df: pd.DataFrame):
     _need_columns(df,(COL_CH4_MJ, COL_ELEC_MJ, COL_YIELD))
@@ -141,7 +174,8 @@ def composition_table(df:pd.DataFrame, compositions: dict, vs_fraction_of_wet:di
         row = farm_mix_row(df, wet, vs_fraction_of_wet, pretreatment_id, label=name)
         rows.append(
             {
-                "compoisition":name,
+                "composition":name,
+                
                 "wet_kg_per_day":sum(wet.values()),
                 "vs_kg_per_day":sum(vs_from_wet(wet, vs_fraction_of_wet).values()),
                 "ch4_nm3_per_day":row[COL_YIELD],
