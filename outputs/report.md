@@ -5,25 +5,25 @@
 | metric                         |    value |
 |:-------------------------------|---------:|
 | Waste processed (wet t/yr)     |   146    |
-| Methane (Nm3/yr)               |  9921.47 |
-| Gross electricity (kWh/yr)     | 34534.9  |
-| Net electricity (kWh/yr)       | 31081.4  |
-| Useful recovered heat (kWh/yr) | 31081.7  |
+| Methane (Nm3/yr)               | 10920.3  |
+| Gross electricity (kWh/yr)     | 38011.6  |
+| Net electricity (kWh/yr)       | 34210.5  |
+| Useful recovered heat (kWh/yr) | 34210.7  |
 | Overall efficiency (%)         |    63    |
-| Electricity saving ($/yr)      |  7894.68 |
-| Heat saving ($/yr)             |  2194    |
-| CO2 avoided (t/yr)             |    29.07 |
+| Electricity saving ($/yr)      |  8689.46 |
+| Heat saving ($/yr)             |  2414.88 |
+| CO2 avoided (t/yr)             |    32    |
 
 ## Energy balance
 
 ```
-Energy in                       98,672kWh/yr
-Gross useful output             34,535kWh/yr
-of which own use                 3,453kWh/yr
-Net electricity                 31,081kWh/yr
-Recovered heat used             31,082kWh/yr
-Recovered heat used             33,055kWh/yr
-Total out                       98,672kWh/yr
+Energy in                      108,606kWh/yr
+Gross useful output             38,012kWh/yr
+of which own use                 3,801kWh/yr
+Net electricity                 34,210kWh/yr
+Recovered heat used             34,211kWh/yr
+Recovered heat used             36,383kWh/yr
+Total out                      108,606kWh/yr
 Closure error                    0.0%
 Efficiency (gross)              66.5%
 Efficiency (net)                63.0%
@@ -33,11 +33,11 @@ Efficiency (net)                63.0%
 
 | composition        |   wet_kg_per_day |   vs_kg_per_day |   ch4_nm3_per_day |   electricity_kwh_per_year |   vs_first |
 |:-------------------|-----------------:|----------------:|------------------:|---------------------------:|-----------:|
-| Farm mix           |              400 |            98.4 |             27.18 |                    34534.9 |       0    |
-| All food waste     |              400 |            88   |             25.08 |                    31870   |      -0.08 |
-| Carbohydrate-heavy |              400 |           115.6 |             28.03 |                    35608.9 |       0.03 |
-| With oil           |              400 |           107.8 |             34.98 |                    44445.6 |       0.29 |
-| All oil            |              400 |           380   |            202.07 |                   256732   |       6.43 |
+| Farm mix           |              400 |             108 |             29.92 |                    38011.6 |       0    |
+| All food waste     |              400 |             100 |             28.51 |                    36216   |      -0.05 |
+| Carbohydrate-heavy |              400 |             118 |             28.71 |                    36478.1 |      -0.04 |
+| With oil           |              400 |             118 |             37.89 |                    48139.6 |       0.27 |
+| All oil            |              400 |             380 |            202.07 |                   256732   |       5.75 |
 
 ## Status
 
