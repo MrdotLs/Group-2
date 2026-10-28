@@ -25,12 +25,12 @@ _ALIASES = {"fw": "food_waste", "scg":"scg", "rice":"rice", "meat":"meat", "oil"
 def parse_mixture(text:str) -> dict:
     parts = re.findall(r"([A-Za-z]+)\s*:\s*([0-9.]+)\s*%", str(text))
     if not parts:
-        raise ValueError(f"cannot read a feedstock mixture from {text!r}")
+        raise ValueError(f"Cannot read a feedstock mixture from {text!r}")
     out: dict = {}
     for name, pct in parts:
         keys = _ALIASES.get(name.lower())
         if keys is None:
-            raise ValueError(f"Unkown feedstock {name!r} in {text!r}")
+            raise ValueError(f"Unknown feedstock {name!r} in {text!r}")
         out[keys] = out.get(keys, 0.0) + float(pct) / 100.0
     if abs(sum(out.values()) - 1.0) > 0.01:
         raise ValueError(f"Mixure {text!r} does not add up to 100%")
@@ -44,7 +44,7 @@ def same_mixture(a:dict, b:dict, tol:float = 1e-6) -> bool:
 def _need_columns(df: pd.DataFrame, cols) -> None:
     missing = [c for c in cols if c not in df.columns]
     if missing:
-        raise ValueError(f"scenario file is missing colomns: {missing}")
+        raise ValueError(f"Scenario file is missing columns: {missing}")
 
 def fit_rows(df: pd.DataFrame, reference_id: str = "s3", exclude_id=("S9",), fit_ids=None) -> pd.DataFrame:
     _need_columns(df, (COL_MIX, COL_FPSI, COL_SPEC,COL_ID))
@@ -72,7 +72,7 @@ def fit_feedstock_yield(df: pd.DataFrame, reference_id: str = "S3", exclude_id=(
 
     sol, _, rank, _ = np.linalg.lstsq(a,b, rcond=None)
     if rank < len(names):
-        raise ValueError("The scenarios do not pin down the yeild of every feedstock")
+        raise ValueError("The scenarios do not pin down the yield of every feedstock")
     worst = float(np.abs(a @ sol - b).max())
     return dict(zip(names, (float(x) for x in sol))), worst
 
@@ -80,8 +80,8 @@ def fit_feedstock_yield(df: pd.DataFrame, reference_id: str = "S3", exclude_id=(
 def Scenario_data_issue(df:pd.DataFrame, tol:float = 0.01) -> pd.DataFrame:
     _need_columns(df, COL_CH4_MJ, COL_ELEC_MJ, COL_YIELD)
     checks = {
-        "methane energy content (MJ/Nm3)": df[COL_CH4_MJ] / df[COL_YIELD],
-        "electrical efficiency": df[COL_ELEC_MJ] / df[COL_CH4_MJ],
+        "Methane energy content (MJ/Nm3)": df[COL_CH4_MJ] / df[COL_YIELD],
+        "Electrical efficiency": df[COL_ELEC_MJ] / df[COL_CH4_MJ],
     }
     rows = []
     for name, s in checks.items():
@@ -94,8 +94,8 @@ def Scenario_data_issue(df:pd.DataFrame, tol:float = 0.01) -> pd.DataFrame:
 def energy_constants(df: pd.DataFrame):
     _need_columns(df,(COL_CH4_MJ, COL_ELEC_MJ, COL_YIELD))
     series = {
-        "methane energy content": df[COL_CH4_MJ] / df[COL_YIELD],
-        "electrical efficiency": df[COL_ELEC_MJ] / df[COL_CH4_MJ],
+        "Methane energy content": df[COL_CH4_MJ] / df[COL_YIELD],
+        "Electrical efficiency": df[COL_ELEC_MJ] / df[COL_CH4_MJ],
     }
     for name, s in series.items():
         if s.max() / s.min() - 1 > 0.01:
@@ -119,18 +119,18 @@ def load_properties(path) -> dict:
     out = {}
     for name, frac in zip(props["feedstock"], props["vs_fraction_of_wet"]):
         if name not in FEEDSTOCK:
-            raise ValueError(f"Unkown feedstock {name!r}; use one of {list(FEEDSTOCK)}")
+            raise ValueError(f"Unknown feedstock {name!r}; use one of {list(FEEDSTOCK)}")
         if not 0 < frac <= 1:
             raise ValueError(f"vs_fraction_of_wet for {name} must be in (0,1]")
         out[name] = float(frac)
     return out
 
 def _check_supported(composition: dict, supported) -> None:
-    unkown = [k for k in composition if k not in supported]
-    if unkown:
+    Unknown = [k for k in composition if k not in supported]
+    if Unknown:
         raise KeyError(
-            f"no group1 yield for {unkown}. supported: {list(supported)}"
-            "Map the waste to the closest supprt type, or ask group 1 to run (simulation building team)"
+            f"no group1 yield for {Unknown}. supported: {list(supported)}"
+            "Map the waste to the closest support type, or ask group 1 to run (simulation building team)"
         )
     if any(v < 0 for v in composition.values()):
         raise ValueError("Masses must not be negative")
