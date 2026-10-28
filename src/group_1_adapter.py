@@ -1,4 +1,5 @@
 import pandas as pd
+import re
 
 mj_per_kwh = 3.6
 
@@ -9,6 +10,25 @@ COL_ELEC_MJ = "Electricity potential (MJ)"
 COL_YIELD = "Treated Yield (Nm3/d)"
 COL_SPEC = "Specific Yield (L/kgVS)"
 COL_Improvement = "Improvement (%)"
+
+COL_BATCH_CHANGE = "Adjusted batch yield change vs S3 (%)"
+COL_STABILITY = "Stability Score"
+
+COL_VS_FED = "VS fed (kg/d)"
+COL_SPEC_REPORTED = "Specific Yield reported (L/kgVS)"
+
+MAX_YIELD_L_PER_KGVS = 1014.0
+
+YIELD_BASES = ("formula", "practical", "reported")
+
+GROUP1_BASIS = {
+    "yield_basis": "formula",
+    "wet_kg_per_day": 10.0,
+    "ts_fraction": 0.25,
+    "vs_of_ts": 0.90,
+    "reactor_m3": 1.0,
+    "olr_overrides": {"S9":4.5},
+}
 
 required_col = (COL_ID, COL_NAME, COL_CH4_MJ, COL_ELEC_MJ, COL_YIELD, COL_SPEC)
 
@@ -28,8 +48,95 @@ def get_scenario(df: pd.DataFrame, scenario_id:str) -> pd.Series:
         raise KeyError(f"unkown scenario {scenario_id!r}; available:{list(df[COL_ID])}")
     return rows.iloc[0]
 
+def _id_number(scenario_id) -> int:
+    m = re.search(r"(\d+)", str(scenario_id))
+    return int(m.group(1)) if m else 10**9
+
+def sort_ids(ids) -> list:
+    return sorted(ids, key=lambda s:(_id_number(s), str(s)))
+
+def missing_ids(df: pd.DataFrame) -> list:
+    nums = {_id_number(s) for s in df[COL_ID]}
+    return [f"s{n}" for n in range(1, max(nums) + 1) if n not in nums]
+
+def select_ids(df: pd.DataFrame, spec) -> list:
+    available = sort_ids(df[COL_ID])
+    if spec is None or str(spec).strip().lower() == "all":
+        return available
+    items = spec if isinstance(spec, (list, tuple)) else str(spec).split(",")
+    out = []
+    for item in (str(i).strip() for i in items):
+        if not item:
+            continue
+        if "-" in item:
+            lo, hi = (_id_number(x) for x in item.split("-", 1))
+            out += [s for s in available if lo <= _id_number(s) <= hi]
+        else:
+            get_scenario(df, item)
+            out.append(item)
+    return list(dict.fromkeys(out))
+
 def implied_feed_kgvs_per_day(rows: pd.Series) -> float:
+    if COL_VS_FED in rows.index and pd.notna(rows[COL_VS_FED]):
+        return float(rows[COL_VS_FED])
     return float(rows[COL_YIELD] * 1000.0 / float(rows[COL_SPEC]))
+
+def group1_basis(settings:dict | None = None) -> dict:
+    b = {**GROUP1_BASIS, **(settings or {})}
+    b["yield_basis"] = str(b["yield_basis"]).lower()
+    if b["yield_basis"] not in YIELD_BASES:
+        raise ValueError(f"group1_basis_yield_basis must be one of {list(YIELD_BASES)}")
+    for k in ("wet_kg_per_day", "ts_fraction", "vs_of_ts", "reactor_m3"):
+        b[k] = float(b[k])
+        if b[k] <= 0:
+            raise ValueError(f"group1_basis.{k} must be positive")
+    if b["ts_fraction"] > 1 or b["vs_of_ts"] > 1:
+        raise ValueError("group1_basis fraction must be at most 1")
+    b["olr_overrides"] = dict(b.get("olr_overrides") or {})
+    return b
+
+def vs_fed_kg_per_day(df: pd.DataFrame, basis:dict) -> pd.Series:
+    if COL_VS_FED in df.columns:
+        return df[COL_VS_FED].astype(float)
+    default = basis["wet_kg_per_day"] * basis["ts_fraction"] * basis["vs_of_ts"]
+    over = basis["olr_overrides"]
+    return pd.Series(
+        [float(over[sid]) * basis["reactor_m3"] if sid in over else default for sid in df[COL_ID]],
+        index = df.index,
+    )
+
+def align_to_group1(df: pd.DataFrame, setting: dict | None = None):
+    b = group1_basis(setting)
+    out = df.copy()
+    out[COL_SPEC_REPORTED] = df[COL_SPEC]
+    info = {"basis": b, "vs_fed": None, "reported_matches": None}
+
+    if b["yield_basis"] == "reported":
+        y = out[COL_SPEC].astype(float)
+    else:
+        vs = vs_fed_kg_per_day(out, b)
+        y = out[COL_YIELD] * 1000.0 / vs
+        if b["yield_basis"] == "practical":
+            if COL_STABILITY not in out.columns:
+                raise ValueError("yield_basis 'practical' needs group 1's  'stability score' column")
+            y = y * out[COL_STABILITY]
+        out[COL_VS_FED] = vs
+        info["vs_fed"] = vs
+
+        per_vs = out[COL_YIELD] * 1000.0 / vs
+        info["reported_matches"] = bool(((out[COL_SPEC_REPORTED] / per_vs - 1).abs() < 0.01).all())
+
+    too_high = y > MAX_YIELD_L_PER_KGVS
+    if too_high.any():
+        bad = ", ".join(f"{sid} ({v:,.0f})" for sid, v in zip(out.loc[too_high, COL_ID], y[too_high]))
+        raise ValueError(
+            f"Methane per kg VS is above the {MAX_YIELD_L_PER_KGVS:,.0f} L/kgVS maximum for {bad}."
+            "The file is probably scaled up: set group1_basis.wet_kg_per_day to wet feed"
+            "Group 1 used for it (e.g 400)."
+        )
+    out[COL_SPEC] = y
+    return out, info
+
 
 def scale_factor_for_feed(df: pd.DataFrame,  reference_id: str, farm_kgvs_per_day:float) -> float:
     if farm_kgvs_per_day <= 0:

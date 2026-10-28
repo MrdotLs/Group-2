@@ -79,8 +79,7 @@ def run_balance(flows, tol:float = 0.05, recovered_kwh: float | None = None) -> 
             "Losses": loss,
         },
     }
-    pass
-
+   
 def format_balance(r: dict) -> str:
     rows = [
         ("Energy in", r["e_in"]),
@@ -88,7 +87,7 @@ def format_balance(r: dict) -> str:
         ("of which own use", r["parasitic_kwh"]),
         ("Net electricity", r["net_electric_kwh"]),
         ("Recovered heat used", r["recovered_heat_kwh"]),
-        ("Recovered heat used", r["loss_kwh"]),
+        ("Loses", r["loss_kwh"]),
         ("Total out", r["e_out"]),
     ]
     lines = [f"{name:<24}{value:>14,.0f}kWh/yr" for name, value in rows]
