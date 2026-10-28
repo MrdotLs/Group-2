@@ -31,9 +31,9 @@ pretreatment:
   source: "Group 1 scenario_summary.csv"
 
 scenarios:
-  run: all # or "S1-S24"
-  base_id: S1
-  reference_id: S3
+  run: all # or "S1-S24" all or each scenario
+  base_id: S3 # comparison
+  reference_id: S3 # "ground truth"
   use_batch_adjustment: true
 
 group1_basis:
