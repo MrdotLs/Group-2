@@ -61,11 +61,9 @@ def fit_rows(df: pd.DataFrame, reference_id: str = "s3", exclude_id=("S9",), fit
     other_mix = df[COL_MIX].map(lambda m : not same_mixture(parse_mixture(m), ref_mix))
     return df[same_pretreatment & ~df[COL_ID].isin(exclude_id) & (is_ref | other_mix)]
 
-def fit_feedstock_yield(df: pd.DataFrame, reference_id: str = "S3", exclude_id=("S9",)):
-    _need_columns(df, (COL_MIX, COL_FPSI, COL_SPEC, COL_ID))
-    ref = get_scenario(df, reference_id)
-    same_pretreatment = (df[COL_FPSI] - ref[COL_FPSI]).abs() < 1e-6
-    rows = df[same_pretreatment  & ~df[COL_ID].isin(exclude_id)]
+def fit_feedstock_yield(df: pd.DataFrame, reference_id: str = "S3", exclude_id=("S9",), fit_ids=None):
+
+    rows = fit_rows(df, reference_id, exclude_id, fit_ids)
 
     fracs = [parse_mixture(m) for m in rows[COL_MIX]]
     names = [f for f in FEEDSTOCK if any(f in fr for fr in fracs)]
@@ -80,7 +78,7 @@ def fit_feedstock_yield(df: pd.DataFrame, reference_id: str = "S3", exclude_id=(
 
 
 def Scenario_data_issue(df:pd.DataFrame, tol:float = 0.01) -> pd.DataFrame:
-    _need_columns(df, COL_CH4_MJ, COL_ELEC_MJ, COL_YIELD)
+    _need_columns(df, (COL_CH4_MJ, COL_ELEC_MJ, COL_YIELD))
     checks = {
         "methane energy content (MJ/Nm3)": df[COL_CH4_MJ] / df[COL_YIELD],
         "electrical efficiency": df[COL_ELEC_MJ] / df[COL_CH4_MJ],
@@ -109,10 +107,10 @@ def energy_constants(df: pd.DataFrame, tol:float = 0.01, warn:bool = True):
             UserWarning, stacklevel=2,
         )
         good = df [~df[COL_ID].isin(bad_ids)]
-        return(
-            float((good[COL_CH4_MJ] / good[COL_YIELD]).median()),
-            float((good[COL_ELEC_MJ] / good[COL_CH4_MJ]).median()),
-        )
+    return(
+        float((good[COL_CH4_MJ] / good[COL_YIELD]).median()),
+        float((good[COL_ELEC_MJ] / good[COL_CH4_MJ]).median()),
+    )
 def pretreatment_multiplier(df: pd.DataFrame, scenario_id:str, reference_id: str = "S3"):
 
     _need_columns(df, (COL_MIX, COL_SPEC))
@@ -128,14 +126,14 @@ def scenario_multiplier(df: pd.DataFrame, scenario_id: str, yields:dict | None =
     if scenario_id == reference_id:
         return 1.0, "reference"
 
-    if(use_batch and COL_BATCH_CHANGE in df.columns in df.columns
+    if(use_batch and COL_BATCH_CHANGE in df.columns
        and pd.notna(row[COL_BATCH_CHANGE]) and pd.notna(ref[COL_BATCH_CHANGE])):
         factor = (1 + float(row[COL_BATCH_CHANGE]) / 100) / (1 + float(ref[COL_BATCH_CHANGE]) / 100)
         return factor, "batch test (uncalibrated)"
 
     mix = parse_mixture(row[COL_MIX])
     if same_mixture(mix, parse_mixture(ref[COL_MIX])):
-        return float(row[COL_SPEC]) / float(ref[ref[COL_SPEC]]), "specific yield vs reference"
+        return float(row[COL_SPEC]) / float(ref[COL_SPEC]), "specific yield vs reference"
 
     if yields is None:
         yields, _ = fit_feedstock_yield(df, reference_id)
@@ -155,7 +153,7 @@ def load_properties(path) -> dict:
         if name not in FEEDSTOCK:
             raise ValueError(f"Unkown feedstock {name!r}; use one of {list(FEEDSTOCK)}")
         if has_split and pd.notna(r["ts_fraction"]) and pd.notna(r["vs_of_ts"]):
-            frac = float(r["ts_fraction"]) and pd.notna(r["vs_of_ts"])
+            frac = float(r["ts_fraction"]) * float(r["vs_of_ts"])
         else:
             frac = float(r["vs_fraction_of_wet"])
         if not 0 < frac <= 1:
@@ -220,7 +218,7 @@ def composition_table(df:pd.DataFrame, compositions: dict, vs_fraction_of_wet:di
     rows = []
     for name, wet in compositions.items():
         row = farm_mix_row(df, wet, vs_fraction_of_wet, pretreatment_id, name, reference_id, use_batch, yeilds, constants)
-        row.append(
+        rows.append(
             {
                 "composition": name,
                 "wet_kg_per_day":sum(wet.values()),

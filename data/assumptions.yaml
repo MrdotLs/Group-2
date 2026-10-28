@@ -29,6 +29,24 @@ pretreatment:
   scenario_id: S3
   status: confirmed
   source: "Group 1 scenario_summary.csv"
+
+scenarios:
+  run: all # or "S1-S24"
+  base_id: S1
+  reference_id: S3
+  use_batch_adjustment: true
+
+group1_basis:
+  yield_basis: formula
+  wet_kg_per_day: 10
+  ts_fraction: 0.25
+  vs_of_ts: 0.90
+  reactor_m3: 1.0
+  olr_overides:
+    S9: 4.5
+  status: confirmed
+  source: "Group 1 main.py, https://github.com/PTwo22/ADM1-simulation"
+
 chp:
   thermal_efficiency: 0.45 # assume engine heat captured will need to be tuned
   own_use_fraction: 0.10 # plant own electricity use, share of gross

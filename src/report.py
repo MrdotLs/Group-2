@@ -27,7 +27,7 @@ from src.group_1_adapter import (
     COL_STABILITY,
     COL_YIELD,
     align_to_group1,
-    group1_bases,
+    group1_basis,
     mj_per_kwh,
     chp_heat_available_kwh,
     get_scenario,
@@ -75,6 +75,7 @@ def alignment_checks(a: dict, df: pd.DataFrame, info:dict, props:dict, yields:di
         "ref_reported": float(ref[COL_SPEC_REPORTED]),
         "reported_matches": info["reported_matches"],
         "group1_vs_fraction": b["ts_fraction"] * b["vs_of_ts"],
+        "your_vs_fraction": props.get("food_waste"),
         "reconcile": None,
     } 
     farm_wet = a["farm"]["waste_wet_kg_per_day"]
@@ -82,7 +83,7 @@ def alignment_checks(a: dict, df: pd.DataFrame, info:dict, props:dict, yields:di
     total = sum(farm_vs.values())
     out["farm_vs_shares"] = {k: v / total for k, v in farm_vs.items()}
 
-    if b["yield_basis"] == "reported" or "foodw_waste" not in props:
+    if b["yield_basis"] == "reported" or "food_waste" not in props:
         return out
     if not same_mixture(parse_mixture(ref[COL_MIX]), {"food_waste": 1.0}):
         return out
@@ -93,10 +94,10 @@ def alignment_checks(a: dict, df: pd.DataFrame, info:dict, props:dict, yields:di
 
     ours = row[COL_ELEC_MJ] / mj_per_kwh
     theirs = float(ref[COL_ELEC_MJ]) / mj_per_kwh
-    if b["yields_basis"] == "practical":
+    if b["yield_basis"] == "practical":
         theirs *= float(ref[COL_STABILITY])
     diff = ours / theirs - 1
-    out["reconcile"] = {"our_kwh_day": ours, "theirs_kwh_day": theirs, "diff": diff}
+    out["reconcile"] = {"ours_kwh_day": ours, "theirs_kwh_day": theirs, "diff": diff}
     if abs(diff) > 0.01:
         warnings.warn(
             f"Group 1's own feed gives {diff:.1%} electricity in your model. Your food-waste VS "
@@ -107,7 +108,8 @@ def alignment_checks(a: dict, df: pd.DataFrame, info:dict, props:dict, yields:di
 
 def _evaluate(a: dict, row: pd.Series):
     farm, chp, hr = a["farm"], a["chp"], a["heat_recovery"]
-    val, em = a["energy_value"], a["emission"]
+    val, em = a["energy_value"], a["emissions"]
+    
     days = float(farm["operating_days_per_year"])
     wet = farm["waste_wet_kg_per_day"]
 
@@ -115,7 +117,7 @@ def _evaluate(a: dict, row: pd.Series):
         row, operating_days=days, thermal_eff=chp["thermal_efficiency"]
     )
     heat = heat_offset(
-        heat_available, hr["usable_fraction"], hr["boilet_efficiency"], val["heat_fuel_price"]
+        heat_available, hr["usable_fraction"], hr["boiler_efficiency"], val["heat_fuel_price"]
     )
     flows = scenario_to_flows(row, operating_days=days, own_use_frac=chp["own_use_fraction"])
     bal = run_balance(flows, recovered_kwh=heat["useful_heat_kwh"])
@@ -169,14 +171,14 @@ def scenario_table(a:dict, df:pd.DataFrame, props:dict, ids=None, yields: dict |
         if not same_mixture(parse_mixture(g1[COL_MIX]), ref_mix):
             notes.append("different feedstock; only its process effect is applied to the farm mix")
 
-        row.append({
+        rows.append({
             COL_ID: sid,
             COL_NAME: g1[COL_NAME],
             "Group 1 mixture": g1[COL_MIX],
             "Yield multiplier": row["multiplier"],
-            "Basis": row["basis"]
+            "Basis": row["basis"],
             **summary, 
-            "Total savings ($/yr)": summary["Electricity saving ($/yr)"] + summary["Heat saving ($/yr)"],
+            "Total Savings ($/yr)": summary["Electricity saving ($/yr)"] + summary["Heat saving ($/yr)"],
             "Notes": "; ".join(notes),
         })
 
@@ -185,7 +187,7 @@ def scenario_table(a:dict, df:pd.DataFrame, props:dict, ids=None, yields: dict |
     if base in set(out[COL_ID]):
         b = out.loc[out[COL_ID] == base, "Net electricity (kWh/yr)"].iloc[0]
         out.insert(
-            out.columns.get_loc("Total Saving ($/yr)") + 1,
+            out.columns.get_loc("Total Savings ($/yr)") + 1,
             f"Net electricity vs {base} (%)",
             (out["Net electricity (kWh/yr)"] / b -1) * 100,
         )
@@ -198,14 +200,14 @@ def _load(scenario_path, a:dict | None = None):
 def run_all_scenario(assumptions, scenario_path, properties_path, ids=None) -> pd.DataFrame:
     a = assumptions if isinstance(assumptions, dict) else load_assumptions(assumptions)
     (df, _), props = _load(scenario_path, a), load_properties(properties_path)
-    yields, _ = fit_feedstock_yield(df, scenario_path(a)["reference_id"])
+    yields, _ = fit_feedstock_yield(df, scenario_settings(a)["reference_id"])
     return scenario_table(a, df, props, ids, yields, energy_constants(df))
 
 
 def run_pipeline(assumptions, scenario_path, properties_path, scenario_id: str | None = None) -> dict:
 
     a = assumptions if isinstance(assumptions, dict) else load_assumptions(assumptions)
-    df, align_info = load_scenarios(scenario_path, a)
+    df, align_info = _load(scenario_path, a)
     props = load_properties(properties_path)
     s = scenario_settings(a)
     sid = scenario_id or a["pretreatment"]["scenario_id"]
@@ -291,10 +293,10 @@ def _save_charts(results: dict, out_dir: Path) -> list:
     plt.close(fig)
     paths.append(p)
 
-    if "all_scenario" in results:
+    if "all_scenarios" in results:
         t = results["all_scenarios"].iloc[::-1]
         colours = ["tab:orange" if b.startswith("batch") else "tab:blue" for b in t["Basis"]]
-        fig, ax = plt.subplot(figsize=(8, 0.32 * len(t) + 1.5))
+        fig, ax = plt.subplots(figsize=(8, 0.32 * len(t) + 1.5))
         ax.barh(t[COL_ID] + "  " + t[COL_NAME], t["Net electricity (kWh/yr)"] / 1000, color=colours)
         ax.set_xlabel("Net electricity, MWh per year (orange = uncalibrated batch test)")
         ax.set_title("Farm mix under each Group 1 scenario")
@@ -320,8 +322,8 @@ def write_report(results: dict, out_dir="outputs", charts: bool = True) -> dict:
     results["comparison"].to_csv(out / "comparison.csv", index=False)
     written["comparison"] = out / "comparison.csv"
     if "all_scenarios" in results:
-        results["all_scenarios"].to_csv(out / "all_scenario.csv", index = False)
-        written["all_scenarios"] = out / "all_scenario.csv"
+        results["all_scenarios"].to_csv(out / "all_scenarios.csv", index = False)
+        written["all_scenarios"] = out / "all_scenarios.csv"
 
     a = results["assumptions"]
     missing = [k for k, v in results["summary"].items() if v is None]
@@ -385,7 +387,7 @@ def write_report(results: dict, out_dir="outputs", charts: bool = True) -> dict:
         t = results["all_scenarios"]
         keep = [c for c in t.columns if c in (
             COL_ID, COL_NAME, "Yield multiplier", "Net electricity (kWh/yr)",
-            "Total saving ($/yr)", "CO2 avoided (t/yr)", "Notes",
+            "Total Savings ($/yr)", "CO2 avoided (t/yr)", "Notes",
         ) or c.startswith("Net electricity vs")]
         lines += [
             "## All scenarios",
