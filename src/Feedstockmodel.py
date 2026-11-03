@@ -210,14 +210,14 @@ def farm_mix_row(df: pd.DataFrame, wet_kg_per_day:dict, vs_fraction_of_wet:dict,
     row["basis"] = basis
     return row
 
-def composition_table(df:pd.DataFrame, compositions: dict, vs_fraction_of_wet:dict, pretreatment_id:str = "S3", operating_days:float = 365, reference_id: str = "S3", use_batch: bool = True, yeilds: dict | None = None, constants: tuple | None = None) -> pd.DataFrame:
-    if yeilds is None:
-        yeilds, _ = fit_feedstock_yield(df, reference_id)
+def composition_table(df:pd.DataFrame, compositions: dict, vs_fraction_of_wet:dict, pretreatment_id:str = "S3", operating_days:float = 365, reference_id: str = "S3", use_batch: bool = True, yields: dict | None = None, constants: tuple | None = None) -> pd.DataFrame:
+    if yields is None:
+        yields, _ = fit_feedstock_yield(df, reference_id)
     if constants is None:
         constants = energy_constants(df)
     rows = []
     for name, wet in compositions.items():
-        row = farm_mix_row(df, wet, vs_fraction_of_wet, pretreatment_id, name, reference_id, use_batch, yeilds, constants)
+        row = farm_mix_row(df, wet, vs_fraction_of_wet, pretreatment_id, name, reference_id, use_batch, yields, constants)
         rows.append(
             {
                 "composition": name,

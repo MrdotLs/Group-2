@@ -5,13 +5,16 @@ Core group 2 of Waste-to-Engery project. This code takes a farm food-waste compo
 
 **Group 2:** The Minh Tran (103488609, team lead), Serei Putthi Ros(105215456)
 
-##What this awnser
+## Use Cases
 
-The supervisor question is wether this is worthit for the farmer: What does it cost, how much energy does it produce, and how much does that save over a year. This code covers the energy and savings side.
+Using the simulation lets the user answer "is this simulation / project worth it (for a farm-scale production)?".
 
-Group 1's simulation give yield at laboratory scale(3.4 volatile soilids per day ) This code would scale to account fro farm and account for the fact farmer waste will not have same composition as the lab's
+The data provides information on economic and environmental benefits - energy yield (biomethane / heat), and profits from saved electricity savings and energy exports.
 
-##Quick Start
+Group 1's simulations provides energy yields at laboratory scale (3.4 volatile soilids per day). This code would scale to account for farm-scale inputs as well as differences in food waste compositions.
+
+## Quick Start
+
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -40,8 +43,8 @@ Group 2/
 └── outputs/                    generated, not committed
 ```
 
-
 ## How the calculation works
+
 Each stage, with the numbers from a 400kg/day run (320kg food waste, 80kg spent coffee grounds):
 
 | Stage | Module | Result |
@@ -59,9 +62,9 @@ Only part of wet waste can produce gas, so first stage matter more that it looks
 
 Heat recovery is what lifts efficiency from 31.5% to 63% the engine turn 35% of the methane energy to electricity; recovering the waste heat roughly double the useful output
 
-### Feedstock yeilds
+### Feedstock yields
 
-`fit_feetstock_yeild` does not use Group 1's scenario one at a time. It fits a specific yeild for each feedstock across all their same-pretreatment scenarios, than builds any compisition from those six numbers
+`fit_feetstock_yield` does not use Group 1's scenario one at a time. It fits a specific yield for each feedstock across all their same-pretreatment scenarios, than builds any compisition from those six numbers
 
 | Feedstock | L CH₄ / kg VS |
 | --- | --- |
@@ -74,12 +77,14 @@ Heat recovery is what lifts efficiency from 31.5% to 63% the engine turn 35% of 
 
 Group 1's food-waste/coffee blends combine exactly in proportion, which is what makes this valid. Coffee ground were never run alone, so 254 is extraploated from the blends.
 
-##Configuration
-eveything is in `data/assumptions.yaml` Seven Section are required: `farm`, `pretreatment`, `chp`, `heat_recovery`, `energy_value`, `emission`, `costs`.
+## Configuration
 
-Supported waste types: `food_waste`, `scg`, `rice`, `meat`, `oil`, `peel`. Anything else raises an error - to map the closest type or ask group 1 
+All configuration data (to customise food waste inputs) is in `data/assumptions.yaml` Seven sections are required: `farm`, `pretreatment`, `chp`, `heat_recovery`, `energy_value`, `emission`, `costs`.
 
-## Known limitation
+Supported waste types: `food_waste`, `scg`, `rice`, `meat`, `oil`, `peel`. Anything else raises an error. Refer to Group 1 and 3's scenario selections for more information.
+
+## Known limitations
+
 **Yields assume the farm's loading rate matches the lab's.** Group 1's scenario S9 produces twice the metane of S6 for the same mix but 20% less per kg of volatile solids. Scaling the feed up without sizing the digester with it will overstate the energy.
 
 **untested blends.** Only food waste with coffee grounds was shown to combine proportionally. Rice-Heavy and oil blends assume the same behavior.

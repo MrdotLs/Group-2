@@ -1,10 +1,10 @@
 metric,value
-Waste processed (wet t/yr),146.0
-Methane (Nm3/yr),15232.34
-Gross electricity (kWh/yr),53030.79
-Net electricity (kWh/yr),47727.71
-Useful recovered heat (kWh/yr),47728.11
+Waste processed (wet t/yr),180.0
+Methane (Nm3/yr),17425.8
+Gross electricity (kWh/yr),60667.23
+Net electricity (kWh/yr),54600.5
+Useful recovered heat (kWh/yr),54600.95
 Overall efficiency (%),63.0
-Electricity saving ($/yr),12122.84
-Heat saving ($/yr),3369.04
-CO2 avoided (t/yr),44.64
+Electricity saving ($/yr),16161.75
+Heat saving ($/yr),3854.19
+CO2 avoided (t/yr),60.96
