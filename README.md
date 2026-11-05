@@ -1,7 +1,7 @@
-# Group 2 - Energy Recovery6 and Conceptual TEA
-**Grabbing Scenario Scaling them up for actual use**
+# Group 2 - Energy Recovery & and Conceptual TEA
+**Scaling of Simulation Scenarios**
 
-Core group 2 of Waste-to-Engery project. This code takes a farm food-waste composition, worksout how much energy it produces, checks the energy balance closes, and report what farmer saves each year
+Group 2 Work of Waste-to-Energy project. This code takes a farm food-waste composition, worksout how much energy it produces, checks the energy balance closes, and report what farmer saves each year.
 
 **Group 2:** The Minh Tran (103488609, team lead), Serei Putthi Ros(105215456)
 
